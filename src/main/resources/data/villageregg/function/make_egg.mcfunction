@@ -37,6 +37,7 @@ execute if data storage villageregg:tmp v.VillagerData{profession:"minecraft:wea
 data modify storage villageregg:tmp a.level set from storage villageregg:tmp v.VillagerData.level
 execute store result storage villageregg:tmp a.trades int 1 run data get storage villageregg:tmp v.Offers.Recipes
 data modify storage villageregg:tmp a.v set from storage villageregg:tmp v
+$data modify storage villageregg:tmp a.uuid set value "$(uuid)"
 
 function villageregg:give with storage villageregg:tmp a
 return 1

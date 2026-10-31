@@ -1,5 +1,7 @@
 package com.example.villageregg;
 
+import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Locale;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -44,8 +46,9 @@ public class VillagerEggMod implements ModInitializer {
             if (!(player instanceof ServerPlayer sp) || !(level instanceof ServerLevel sl)) {
                 return InteractionResult.SUCCESS; // client side: do not open the trade screen
             }
-            boolean ok = run(sl, sp, "function villageregg:make_egg {uuid:\"" + entity.getUUID() + "\"}");
-            if (ok) {
+            run(sl, sp, "function villageregg:make_egg {uuid:\"" + entity.getUUID() + "\"}");
+            // The function tags the villager only after the egg was handed over.
+            if (hasTag(entity, TAKEN_TAG)) {
                 entity.discard(); // the egg exists now, so remove the villager
             } else {
                 sp.sendSystemMessage(Component.literal("Could not turn this villager into an egg.")
@@ -65,12 +68,7 @@ public class VillagerEggMod implements ModInitializer {
             BlockPos at = hit.getBlockPos().relative(hit.getDirection());
             String cmd = String.format(Locale.ROOT, "function villageregg:place {x:%.2f,y:%d,z:%.2f}",
                     at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
-            if (run(sl, sp, cmd)) {
-                if (!sp.isCreative()) held.shrink(1);
-            } else {
-                sp.sendSystemMessage(Component.literal("Could not place this villager.")
-                        .withStyle(ChatFormatting.RED), true);
-            }
+            run(sl, sp, cmd); // the function also uses up the egg (not in creative)
             return InteractionResult.SUCCESS;
         });
 
@@ -91,17 +89,32 @@ public class VillagerEggMod implements ModInitializer {
         return cd != null && cd.copyTag().toString().contains("vegg");
     }
 
-    /** Runs a function as the player, at the player. True if it ran and finished (returned 1). */
-    private static boolean run(ServerLevel level, ServerPlayer sp, String functionCall) {
+    private static final String TAKEN_TAG = "villageregg_taken";
+
+    /** Runs a function as the player, at the player. */
+    private static void run(ServerLevel level, ServerPlayer sp, String functionCall) {
         MinecraftServer server = level.getServer();
         String cmd = "execute as " + sp.getUUID() + " at @s run " + functionCall;
         try {
-            var source = server.createCommandSourceStack().withSuppressedOutput();
-            int result = server.getCommands().getDispatcher().execute(cmd, source);
-            return result > 0;
+            server.getCommands().performPrefixedCommand(
+                    server.createCommandSourceStack().withSuppressedOutput(), cmd);
         } catch (Exception e) {
             LOGGER.error("Villager Egg command failed: {}", cmd, e);
-            return false;
         }
+    }
+
+    /** Checks an entity's command tags (looked up by name, it was renamed between versions). */
+    private static boolean hasTag(Entity entity, String tag) {
+        for (String name : new String[] {"getTags", "entityTags"}) {
+            try {
+                Method m = entity.getClass().getMethod(name);
+                Object result = m.invoke(entity);
+                if (result instanceof Collection<?> tags) return tags.contains(tag);
+            } catch (Throwable ignored) {
+                // try the next name
+            }
+        }
+        LOGGER.error("Could not read entity tags; update Villager Egg for this Minecraft version.");
+        return false;
     }
 }
