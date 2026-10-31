@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "villageregg",
+  "version": "${version}",
+  "name": "Villager Egg",
+  "description": "Shift + right-click a villager to turn it into an egg that remembers its job, level and trades. Right-click a block with the egg to place it back exactly as it was.",
+  "authors": ["S.Surviabily"],
+  "license": "MIT",
+  "icon": "assets/villageregg/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.example.villageregg.VillagerEggMod"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
